@@ -1,61 +1,98 @@
 # Lithium-ion Battery State of Health (SoH) Estimation
 
-This project provides a comprehensive machine learning and statistical framework to predict and monitor the **State of Health (SoH)** of Lithium-ion batteries. Estimating SoH is crucial for predicting the remaining useful life (RUL) and ensuring the safety and reliability of battery management systems (BMS).
+This project provides a complete machine learning and statistical framework for predicting the **State of Health (SoH)** of Lithium-ion batteries — a critical metric for estimating remaining useful life (RUL) in Battery Management Systems (BMS).
 
-This repository implements data pre-processing, outlier detection, and predictive modeling using both **Linear Regression** and **Long Short-Term Memory (LSTM)** networks.
+The pipeline covers data preprocessing, outlier removal, and predictive modeling using **Linear Regression** (baseline) and **LSTM** (deep learning) on the NASA Prognostics battery dataset across 8 battery cells.
+
+---
+
+## Results
+
+Models were evaluated at two lifecycle entry points: **50% cycle** and **70% cycle** milestones.
+
+| Model | Split | Avg RMSE | Avg MAE |
+|:---|:---:|:---:|:---:|
+| Linear Regression | 50% cycle | 0.0434 | 0.0351 |
+| Linear Regression | 70% cycle | 0.0462 | 0.0388 |
+| **LSTM** | **50% cycle** | **0.0197** | **0.0142** |
+| **LSTM** | **70% cycle** | **0.0225** | **0.0161** |
+
+> LSTM achieves **~54% lower RMSE** than Linear Regression at the 50% cycle milestone.
 
 ---
 
 ## Project Structure & Workflow
 
-The estimation pipeline is organized into four sequential stages:
+```
+SoH_estimation_of_Lithium-ion_battery/
+├── 1_Calculation_and_Visulaliztion_of_SoH/   # Stage 1: SoH calculation from raw discharge data
+├── 2_Elimination_of_outliers/                 # Stage 2: Quantile-based outlier removal
+├── 3_Linear_Regresssion_with_SoH/            # Stage 3: Baseline linear regression model
+├── 4_LSTM_with_SoH/                           # Stage 4: LSTM deep learning model
+├── run_pipeline.py                            # End-to-end runner script
+└── results_summary.csv                       # Per-battery RMSE/MAE results
+```
 
-### 1. Data Calculation and Visualization
-Calculates the State of Health (SoH) across various battery cell cycles from the raw datasets. 
-* **Key Steps**: Load raw capacity measurements, calculate SoH relative to nominal capacity, and generate cycle-by-cycle profiles.
-* **Component Link**: [Calculation & Visualization Notebook](./1_Calculation_and_Visulaliztion_of_SoH/Calculation_and_Visualization_of_SoH.ipynb)
+The estimation pipeline runs in four sequential stages:
+
+### 1. SoH Calculation and Visualization
+Loads raw NASA discharge data (8 battery cells: B05, B07, B18, B33, B34, B46, B47, B48), aggregates per-cycle capacity measurements, computes the SoH ratio, and generates cycle degradation plots.
+
+- **Notebook**: [Calculation_and_Visualization_of_SoH.ipynb](./1_Calculation_and_Visulaliztion_of_SoH/Calculation_and_Visualization_of_SoH.ipynb)
 
 ### 2. Outlier Elimination
-Implements statistical filtering techniques using quantile methods to remove noise and experimental measurement anomalies from the computed SoH curves.
-* **Key Steps**: Identify outlier boundaries, filter out transient noise spikes, and smooth the dataset for modeling.
-* **Component Link**: [Outlier Elimination Notebook](./2_Elimination_of_outliers/Calculation_and_Visualization_of_refined_SoH.ipynb)
+Applies 5th–95th percentile quantile filtering to remove noise and measurement anomalies from the SoH curves, producing clean per-cycle refined datasets for modeling.
 
-### 3. Linear Regression Modeling
-Applies a baseline Linear Regression model to forecast the trend of SoH decay. Predictions are evaluated at different entry points in the battery lifecycle.
-* **Configurations**: Models are trained and tested starting at **50%** and **70%** cycle milestones.
-* **Component Link**: [Linear Regression Script](./3_Linear_Regresssion_with_SoH/SoH_estimation_with_Linear_Regression.m)
+- **Notebook**: [Calculation_and_Visualization_of_refined_SoH.ipynb](./2_Elimination_of_outliers/Calculation_and_Visualization_of_refined_SoH.ipynb)
 
-### 4. Recurrent Neural Network (LSTM) Modeling
-Utilizes a deep learning approach using Long Short-Term Memory (LSTM) networks to capture non-linear degradation characteristics and long-term dependencies in battery aging.
-* **Configurations**: Evaluated starting at **50%** and **70%** cycle milestones to simulate early-stage and mid-stage lifetime prediction.
-* **Component Link**: [LSTM Notebook](./4_LSTM_with_SoH/SoH_estimation_with_LSTM.ipynb)
+### 3. Linear Regression (Baseline)
+Fits a linear degradation model on training cycles and extrapolates into the future. Evaluated at both 50% and 70% train/test split points.
+
+- **Script**: [SoH_estimation_with_Linear_Regression.m](./3_Linear_Regresssion_with_SoH/SoH_estimation_with_Linear_Regression.m)
+
+### 4. LSTM Deep Learning
+Trains a 64-unit LSTM network (look-back window = 3 cycles, early stopping) to capture non-linear temporal degradation patterns. Significantly outperforms the linear baseline.
+
+- **Notebook**: [SoH_estimation_with_LSTM.ipynb](./4_LSTM_with_SoH/SoH_estimation_with_LSTM.ipynb)
 
 ---
 
-## Methodology Overview
+## Methodology
 
-| Methodology | Application Scenario | Features Covered |
-| :--- | :--- | :--- |
-| **Quantile Filtering** | Preprocessing | Noise reduction, anomaly detection |
-| **Linear Regression** | Baseline Prediction | Linear trend fitting, computationally efficient |
-| **LSTM Networks** | Advanced Prediction | Sequential dependencies, non-linear degradation modeling |
+| Component | Detail |
+|:---|:---|
+| **Dataset** | NASA Prognostics – 8 Li-ion cells (B05–B48), 64–197 discharge cycles each |
+| **Outlier Removal** | Quantile filtering (5th–95th percentile) |
+| **Baseline Model** | Ordinary Least Squares Linear Regression |
+| **Deep Learning Model** | LSTM (64 units, look-back=3, EarlyStopping, Adam optimizer) |
+| **Evaluation Splits** | 50% and 70% train/test cycle milestones |
+| **Metrics** | RMSE, MAE |
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-* Python 3.8+
-* Jupyter Notebook / JupyterLab
-* MATLAB (for the baseline Linear Regression execution)
+- Python 3.8+
+- MATLAB (for the Linear Regression `.m` script only)
 
-### Required Python Libraries
+### Install Dependencies
 ```bash
-pip install numpy pandas matplotlib scikit-learn tensorflow keras
+pip install numpy pandas matplotlib seaborn scikit-learn tensorflow keras
 ```
+
+### Run the Full Pipeline
+```bash
+python run_pipeline.py
+```
+
+This runs all four stages end-to-end, saves all figures under each module's `fig/` folder, saves trained LSTM model weights, and outputs `results_summary.csv`.
 
 ---
 
-## Dataset Reference
-This project utilizes the battery aging datasets provided by the **NASA Prognostics Center of Excellence**.
-* [NASA Randomized Battery Dataset](https://www.nasa.gov/) (Prognostic Data Repository)
+## Dataset
+
+NASA Prognostics Center of Excellence – Li-ion Battery Aging Datasets.
+
+> B. Saha and K. Goebel (2007). "Battery Data Set", NASA Ames Prognostics Data Repository, NASA Ames Research Center, Moffett Field, CA.  
+> [https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/)
