@@ -1,0 +1,11 @@
+# Core ML / data
+numpy==2.0.1
+pandas==3.0.1
+tensorflow==2.18.0
+scikit-learn==1.6.0
+matplotlib==3.10.8
+seaborn==0.13.2
+
+# API serving
+fastapi==0.112.1
+uvicorn==0.30.6

@@ -96,3 +96,74 @@ NASA Prognostics Center of Excellence – Li-ion Battery Aging Datasets.
 
 > B. Saha and K. Goebel (2007). "Battery Data Set", NASA Ames Prognostics Data Repository, NASA Ames Research Center, Moffett Field, CA.  
 > [https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/)
+
+---
+
+## Serving the Model (FastAPI)
+
+A minimal REST API is included under `api/main.py`. It loads the trained LSTM
+weights once at startup and exposes a single `/predict` endpoint.
+
+### Start the server
+
+```bash
+uvicorn api.main:app --reload
+```
+
+The server starts on `http://127.0.0.1:8000`.  
+Visit `http://127.0.0.1:8000/docs` for the interactive Swagger UI.
+
+### Endpoints
+
+| Method | Path | Description |
+|:---|:---|:---|
+| `GET` | `/health` | Returns `{"status": "ok"}` once the model is loaded |
+| `POST` | `/predict` | Predicts next-cycle SoH from the last 3 cycle readings |
+
+### Input format
+
+The model was trained on **per-cycle SoH values** with a look-back window of 3.
+Supply the SoH readings of the last 3 consecutive discharge cycles, oldest first.
+
+```json
+{
+  "soh_history": [0.917, 0.912, 0.907]
+}
+```
+
+*(These are real values from battery B05, cycles 5–8 of the NASA dataset.)*
+
+### Sample request
+
+```bash
+curl -X POST http://127.0.0.1:8000/predict \
+     -H "Content-Type: application/json" \
+     -d '{"soh_history": [0.917, 0.912, 0.907]}'
+```
+
+### Sample response
+
+```json
+{
+  "predicted_soh": 0.9012,
+  "health_status": "Good"
+}
+```
+
+`health_status` is `"Good"` when `predicted_soh >= 0.8`, otherwise `"Degraded"`.
+
+### Validation
+
+Malformed requests are rejected with HTTP 422 before they reach the model:
+
+```bash
+# Too few values → 422
+curl -X POST http://127.0.0.1:8000/predict \
+     -H "Content-Type: application/json" \
+     -d '{"soh_history": [0.91]}'
+
+# Value out of range → 422
+curl -X POST http://127.0.0.1:8000/predict \
+     -H "Content-Type: application/json" \
+     -d '{"soh_history": [1.5, 0.9, 0.88]}'
+```
