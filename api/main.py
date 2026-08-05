@@ -71,6 +71,8 @@ async def lifespan(app: FastAPI):
     print("[shutdown] Server stopped.")
 
 
+from fastapi.staticfiles import StaticFiles
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -84,6 +86,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Serve static dashboard files (index.html mounted at root)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 # ---------------------------------------------------------------------------
