@@ -17,6 +17,7 @@ import numpy as np
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 import tensorflow as tf
@@ -71,8 +72,6 @@ async def lifespan(app: FastAPI):
     print("[shutdown] Server stopped.")
 
 
-from fastapi.staticfiles import StaticFiles
-
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -86,9 +85,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-
-# Serve static dashboard files (index.html mounted at root)
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 # ---------------------------------------------------------------------------
@@ -181,3 +177,10 @@ def predict(request: PredictRequest):
         predicted_soh=round(predicted_soh, 4),
         health_status=health_status,
     )
+
+
+# ---------------------------------------------------------------------------
+# Static files — MUST be mounted LAST so API routes take priority
+# ---------------------------------------------------------------------------
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
